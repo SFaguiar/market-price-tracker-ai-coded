@@ -62,129 +62,156 @@ if (typeof Chart !== 'undefined') {
 }
 
 // =========================================================================
-// DASHBOARD
+// DASHBOARD DE PREÇOS (Nova Versão)
 // =========================================================================
 
+async function fetchCestas() {
+    try {
+        const response = await fetch(`${API_BASE}/api/dashboard/cestas`);
+        if (!response.ok) throw new Error('Falha ao buscar cestas');
+        return await response.json();
+    } catch (error) {
+        console.error(error);
+        return { cesta_simples: [], cesta_completa: [] };
+    }
+}
+
+async function fetchSearch(query) {
+    try {
+        const response = await fetch(`${API_BASE}/api/dashboard/search?query=${encodeURIComponent(query)}`);
+        if (!response.ok) throw new Error('Falha ao buscar produto');
+        return await response.json();
+    } catch (error) {
+        console.error(error);
+        return { resultados: [] };
+    }
+}
+
 async function initDashboard() {
-    const ctxHistory = document.getElementById('chartTendencia');
-    if (!ctxHistory) return;
+    const inputSearch = document.getElementById('input-search');
+    const searchResults = document.getElementById('search-results');
+    const searchList = document.getElementById('search-list');
     
-    const compras = await fetchCompras();
-    if (compras.length === 0) return;
+    const cestasGrid = document.getElementById('cestas-grid');
+    const tabSimples = document.getElementById('tab-simples');
+    const tabCompleta = document.getElementById('tab-completa');
     
-    // Processamento de dados
-    const gastosPorDia = {};
-    let totalGasto = 0;
-    
-    // Para cálculo de Outliers
-    const historicoPrecosProduto = {}; 
-    
-    compras.forEach(compra => {
-        const dataStr = compra.data; 
-        let gastoCompra = 0;
+    if (!inputSearch) return; // Não está na página do dashboard
+
+    // 1. Carrega as Cestas Iniciais
+    const cestasData = await fetchCestas();
+    let currentTab = 'simples';
+
+    function renderCestas() {
+        if (!cestasGrid) return;
+        cestasGrid.innerHTML = '';
         
-        compra.itens.forEach(item => {
-            const gastoItem = parseFloat(item.preco_pago) * parseFloat(item.quantidade);
-            gastoCompra += gastoItem;
+        const data = currentTab === 'simples' ? cestasData.cesta_simples : cestasData.cesta_completa;
+        
+        if (data.length === 0) {
+            cestasGrid.innerHTML = '<p class="text-slate-400">Nenhum dado suficiente para formar cestas.</p>';
+            return;
+        }
+
+        data.forEach((item, index) => {
+            // Se for o primeiro (mais barato) e tiver status Completa, ganha coroa
+            const isWinner = index === 0 && item.status === 'Completa';
+            const statusClass = item.status === 'Completa' ? 'text-neon-green' : 'text-amber-400';
             
-            // Registrando preço por unidade padrão para média
-            const pId = item.produto.id;
-            const pLabel = produtoDisplayName(item.produto);
-            if(!historicoPrecosProduto[pId]) {
-                historicoPrecosProduto[pId] = { nome: pLabel, precos: [] };
+            let missingHtml = '';
+            if (item.faltantes.length > 0) {
+                missingHtml = `<div class="mt-3 pt-3 border-t border-slate-700/50 text-xs text-slate-400">
+                    <span class="text-amber-400"><i class="fa-solid fa-circle-exclamation"></i> Faltam dados:</span> ${item.faltantes.join(', ')}
+                </div>`;
             }
-            historicoPrecosProduto[pId].precos.push({
-                data: dataStr,
-                preco_padrao: parseFloat(item.preco_por_unidade_padrao),
-                mercado: compra.mercado.nome,
-                is_promocao: item.is_promocao
-            });
+
+            const card = `
+                <div class="glass-panel p-6 rounded-2xl relative overflow-hidden border ${isWinner ? 'border-neon-green shadow-[0_0_15px_rgba(34,197,94,0.2)]' : 'border-slate-700/50'}">
+                    ${isWinner ? '<div class="absolute -right-6 -top-6 text-5xl opacity-10">👑</div>' : ''}
+                    <h3 class="text-lg font-bold text-slate-200 mb-1 flex items-center gap-2">
+                        ${isWinner ? '<i class="fa-solid fa-crown text-neon-green"></i>' : '<i class="fa-solid fa-store text-slate-500"></i>'}
+                        ${item.mercado}
+                    </h3>
+                    <div class="flex items-end gap-2 mb-2">
+                        <span class="text-3xl font-black text-white">${formatCurrency(item.preco_total)}</span>
+                        <span class="text-sm pb-1 text-slate-400">/ un. padrão</span>
+                    </div>
+                    <div class="text-sm font-medium ${statusClass}">
+                        ${item.status}
+                    </div>
+                    ${missingHtml}
+                </div>
+            `;
+            cestasGrid.innerHTML += card;
+        });
+    }
+
+    renderCestas();
+
+    // Tabs Control
+    if (tabSimples && tabCompleta) {
+        tabSimples.addEventListener('click', () => {
+            currentTab = 'simples';
+            tabSimples.className = 'px-4 py-1.5 rounded text-sm font-medium transition-colors bg-neon-purple text-white shadow';
+            tabCompleta.className = 'px-4 py-1.5 rounded text-sm font-medium text-slate-400 hover:text-white transition-colors';
+            renderCestas();
         });
         
-        if (!gastosPorDia[dataStr]) gastosPorDia[dataStr] = 0;
-        gastosPorDia[dataStr] += gastoCompra;
-        
-        // Se a data for no mês atual
-        const hoje = new Date();
-        const dataCompra = new Date(dataStr);
-        if (dataCompra.getMonth() === hoje.getMonth() && dataCompra.getFullYear() === hoje.getFullYear()) {
-            totalGasto += gastoCompra;
-        }
-    });
-    
-    // Atualizar KPI
-    const totalGastoEl = document.getElementById('kpi-gasto-mes');
-    if (totalGastoEl) {
-        totalGastoEl.textContent = formatCurrency(totalGasto);
+        tabCompleta.addEventListener('click', () => {
+            currentTab = 'completa';
+            tabCompleta.className = 'px-4 py-1.5 rounded text-sm font-medium transition-colors bg-neon-purple text-white shadow';
+            tabSimples.className = 'px-4 py-1.5 rounded text-sm font-medium text-slate-400 hover:text-white transition-colors';
+            renderCestas();
+        });
     }
-    
-    // Ordenar datas
-    const sortedDates = Object.keys(gastosPorDia).sort();
-    const historyData = sortedDates.map(date => gastosPorDia[date]);
-    
-    // Gráfico de Tendência (Limitado a 3 meses)
-    new Chart(ctxHistory, {
-        type: 'line',
-        data: {
-            labels: sortedDates.slice(-90), // Últimos 90 dias
-            datasets: [{
-                label: 'Gasto Diário (R$)',
-                data: historyData.slice(-90),
-                borderColor: '#3b82f6',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                borderWidth: 2,
-                tension: 0.4,
-                fill: true,
-                pointBackgroundColor: '#0f172a',
-                pointBorderColor: '#3b82f6',
-                pointBorderWidth: 2,
-                pointRadius: 4,
-                pointHoverRadius: 6
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } }
+
+    // 2. Busca Global com Debounce
+    let searchTimeout;
+    inputSearch.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+        
+        clearTimeout(searchTimeout);
+        
+        if (query.length < 2) {
+            searchResults.classList.add('hidden');
+            return;
         }
-    });
 
-    // Detectar Outliers (+15% da média)
-    const outliersList = document.getElementById('outliers-list');
-    const outliersEmpty = document.getElementById('outliers-empty');
-    if(outliersList) {
-        outliersList.innerHTML = ''; // Limpar skeletons
-        let hasOutlier = false;
-
-        Object.values(historicoPrecosProduto).forEach(prod => {
-            if(prod.precos.length > 2) {
-                // Média de todos exceto o último
-                const historicoAntigo = prod.precos.slice(0, -1);
-                const soma = historicoAntigo.reduce((acc, curr) => acc + curr.preco_padrao, 0);
-                const media = soma / historicoAntigo.length;
-                
-                const ultimaCompra = prod.precos[prod.precos.length - 1];
-                const diferencaPerc = ((ultimaCompra.preco_padrao - media) / media) * 100;
-
-                if(diferencaPerc > 15) {
-                    hasOutlier = true;
-                    outliersList.innerHTML += `
-                        <div class="bg-slate-800/50 border border-red-500/30 rounded-lg p-3">
-                            <div class="text-sm font-semibold text-white mb-1">${prod.nome}</div>
-                            <div class="flex justify-between items-center text-xs">
-                                <span class="text-slate-400">${ultimaCompra.data} no ${ultimaCompra.mercado}</span>
-                                <span class="text-red-400 font-bold">+${diferencaPerc.toFixed(1)}% acima da média</span>
+        searchTimeout = setTimeout(async () => {
+            const data = await fetchSearch(query);
+            
+            searchList.innerHTML = '';
+            
+            if (data.resultados.length === 0) {
+                searchList.innerHTML = '<div class="text-slate-400 italic">Nenhum histórico recente encontrado para esta busca.</div>';
+            } else {
+                data.resultados.forEach((res, idx) => {
+                    const isCheapest = idx === 0;
+                    
+                    const row = `
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg ${isCheapest ? 'bg-neon-green/10 border border-neon-green/30' : 'bg-slate-800/50 border border-slate-700/50'}">
+                            <div>
+                                <div class="font-bold text-white flex items-center gap-2">
+                                    ${res.mercado}
+                                    ${isCheapest ? '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-neon-green text-slate-900 uppercase">Mais Barato</span>' : ''}
+                                </div>
+                                <div class="text-xs text-slate-400 mt-1">${res.produto_str}</div>
+                                <div class="text-[10px] text-slate-500 mt-0.5"><i class="fa-regular fa-clock"></i> Último registro: ${res.data}</div>
+                            </div>
+                            <div class="mt-2 sm:mt-0 text-left sm:text-right">
+                                <div class="text-xl font-black ${isCheapest ? 'text-neon-green' : 'text-slate-200'}">${formatCurrency(res.preco_padrao)}</div>
+                                <div class="text-xs text-slate-500">por ${res.unidade}</div>
                             </div>
                         </div>
                     `;
-                }
+                    searchList.innerHTML += row;
+                });
             }
-        });
-
-        if(!hasOutlier && outliersEmpty) {
-            outliersEmpty.classList.remove('hidden');
-        }
-    }
+            
+            searchResults.classList.remove('hidden');
+            
+        }, 500); // 500ms debounce
+    });
 }
 
 // =========================================================================

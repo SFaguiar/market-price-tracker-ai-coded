@@ -14,7 +14,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from app.database import Base, engine
-from app.routes import compras, mercados, produtos, web, redes, saneamento
+from app.routes import compras, mercados, produtos, web, redes, saneamento, dashboard
 
 from sqladmin import Admin
 from app.admin import AdminAuth, RedeAdmin, MercadoAdmin, ProdutoAdmin, CompraAdmin, CompraItemAdmin, SchemaView, BulkImportView, NFEParserView, DeduplicationView
@@ -89,3 +89,4 @@ app.include_router(mercados.router)
 app.include_router(produtos.router)
 app.include_router(compras.router)
 app.include_router(saneamento.router)
+app.include_router(dashboard.router)
