@@ -91,7 +91,7 @@ class ProdutoBase(BaseModel):
     marca: str
     categoria: str
     conteudo_embalagem: Decimal
-    unidade_medida: Literal["kg", "g", "l", "ml", "un"]
+    unidade_medida: str
 
 
 class ProdutoCreate(ProdutoBase):

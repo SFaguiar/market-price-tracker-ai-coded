@@ -229,12 +229,19 @@ function addNewItemRow() {
     row.id = `item-row-${itemCounter}`;
     
     row.innerHTML = `
-        <div class="md:col-span-6">
+        <div class="md:col-span-6 relative" id="combo-container-${itemCounter}">
             <label class="block text-xs font-medium text-slate-400 mb-1">Produto (Catálogo)</label>
-            <select name="itens[${itemCounter}].produto_id" required
+            
+            <!-- Hidden input to store real value -->
+            <input type="hidden" name="itens[${itemCounter}].produto_id" id="prod-id-${itemCounter}" required>
+            
+            <!-- Visible Search Input -->
+            <input type="text" id="prod-search-${itemCounter}" placeholder="Selecione ou busque..." autocomplete="off"
                    class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-neon-blue">
-                <option value="">Selecione um produto...</option>
-            </select>
+                   
+            <!-- Dropdown Results -->
+            <ul id="prod-list-${itemCounter}" class="hidden absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+            </ul>
         </div>
         
         <div class="md:col-span-2">
@@ -272,22 +279,222 @@ function addNewItemRow() {
     
     container.appendChild(row);
     
-    // Carregar opções do select de produto via API
-    const selectEl = row.querySelector(`[name="itens[${itemCounter}].produto_id"]`);
-    populateProdutoSelect(selectEl);
+    // Inicializa Dropdown Customizado para esta linha
+    initCombobox(itemCounter);
     
     itemCounter++;
 }
 
-async function populateProdutoSelect(selectEl) {
-    const produtos = await fetchProdutos();
-    produtos.forEach(p => {
-        const option = document.createElement('option');
-        option.value = p.id;
-        option.textContent = produtoDisplayName(p);
-        selectEl.appendChild(option);
+// =========================================================================
+// LÓGICA DO COMBOBOX DE PRODUTO
+// =========================================================================
+
+// Vamos buscar produtos uma vez e manter em memoria (ou quando precisar atualizar)
+window.produtosList = window.produtosList || [];
+let fetchProdutosPromise = null;
+
+function carregarProdutosSeNecessario() {
+    if (window.produtosList.length > 0) return Promise.resolve(window.produtosList);
+    
+    if (!fetchProdutosPromise) {
+        fetchProdutosPromise = fetchProdutos().then(res => {
+            window.produtosList = res || [];
+            return window.produtosList;
+        });
+    }
+    return fetchProdutosPromise;
+}
+
+// Chama assim que o script carregar
+carregarProdutosSeNecessario();
+
+function initCombobox(idx) {
+    const searchInput = document.getElementById(`prod-search-${idx}`);
+    const hiddenInput = document.getElementById(`prod-id-${idx}`);
+    const listEl = document.getElementById(`prod-list-${idx}`);
+    const container = document.getElementById(`combo-container-${idx}`);
+    
+    if (!searchInput) return;
+
+    // Abrir lista quando focar
+    searchInput.addEventListener('focus', async () => {
+        if (window.produtosList.length === 0) {
+            await carregarProdutosSeNecessario();
+        }
+        renderDropdown(searchInput.value, listEl, hiddenInput, searchInput, idx);
+        listEl.classList.remove('hidden');
+    });
+
+    // Filtrar ao digitar
+    searchInput.addEventListener('input', async (e) => {
+        hiddenInput.value = ''; // limpa seleção se alterou
+        if (window.produtosList.length === 0) {
+            await carregarProdutosSeNecessario();
+        }
+        renderDropdown(e.target.value, listEl, hiddenInput, searchInput, idx);
+        listEl.classList.remove('hidden');
+    });
+
+    // Limpar se sair sem selecionar nada (não aceitar texto livre inexistente)
+    searchInput.addEventListener('blur', () => {
+        // Pequeno atraso para dar tempo de o click no 'li' ser processado
+        setTimeout(() => {
+            if (!hiddenInput.value) {
+                searchInput.value = ''; // Reseta o campo
+            }
+        }, 200);
+    });
+
+    // Fechar ao clicar fora
+    document.addEventListener('click', (e) => {
+        if (!container.contains(e.target)) {
+            listEl.classList.add('hidden');
+        }
     });
 }
+
+function renderDropdown(query, listEl, hiddenInput, searchInput, idx) {
+    listEl.innerHTML = '';
+    const q = query.toLowerCase();
+    
+    // Filtrar produtos
+    const filtered = window.produtosList.filter(p => {
+        const str = `${p.tipo} ${p.subtipo || ''} ${p.marca}`.toLowerCase();
+        return str.includes(q);
+    }).slice(0, 50); // limite de 50 para não travar
+    
+    // Renderizar resultados
+    filtered.forEach(p => {
+        const li = document.createElement('li');
+        li.className = 'px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white cursor-pointer border-b border-slate-700/50 last:border-0';
+        li.innerHTML = `<strong>${p.tipo}</strong> ${p.subtipo ? p.subtipo : ''} - <span class="text-slate-400">${p.marca} (${p.conteudo_embalagem}${p.unidade_medida})</span>`;
+        
+        li.addEventListener('click', () => {
+            hiddenInput.value = p.id;
+            searchInput.value = `${p.tipo} ${p.subtipo || ''} - ${p.marca} (${p.conteudo_embalagem}${p.unidade_medida})`;
+            listEl.classList.add('hidden');
+        });
+        
+        listEl.appendChild(li);
+    });
+
+    // Adicionar botão de cadastro (Sempre no final)
+    const addLi = document.createElement('li');
+    addLi.className = 'px-3 py-2 text-sm text-neon-blue font-bold bg-slate-900/50 hover:bg-slate-700 cursor-pointer flex items-center gap-2 sticky bottom-0';
+    addLi.innerHTML = `<i class="fa-solid fa-plus"></i> Cadastrar "${query}"`;
+    addLi.addEventListener('click', () => {
+        listEl.classList.add('hidden');
+        abrirModalProduto(query, idx);
+    });
+    listEl.appendChild(addLi);
+}
+
+// =========================================================================
+// MODAL DE CADASTRO RÁPIDO DE PRODUTO
+// =========================================================================
+
+let linhaSendoEditada = null;
+
+function abrirModalProduto(textoDigitado, idxRow) {
+    linhaSendoEditada = idxRow;
+    const modal = document.getElementById('modal-produto');
+    const form = document.getElementById('form-quick-produto');
+    
+    if (!modal) return;
+    
+    form.reset();
+    
+    // Preenche o tipo inicial com o que ele estava tentando buscar
+    document.getElementById('quick-tipo').value = textoDigitado;
+    
+    modal.classList.remove('hidden');
+    document.getElementById('quick-tipo').focus();
+}
+
+function fecharModalProduto() {
+    const modal = document.getElementById('modal-produto');
+    if (modal) modal.classList.add('hidden');
+    linhaSendoEditada = null;
+}
+
+// Listener para fechar modal no botão e no overlay
+document.addEventListener('DOMContentLoaded', () => {
+    const btnCancel = document.getElementById('btn-cancel-modal');
+    const overlay = document.getElementById('modal-overlay');
+    const formQuick = document.getElementById('form-quick-produto');
+    
+    if (btnCancel) btnCancel.addEventListener('click', fecharModalProduto);
+    if (overlay) overlay.addEventListener('click', fecharModalProduto);
+    
+    if (formQuick) {
+        // Impede de submeter o form principal se apertar Enter no modal
+        formQuick.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                // Apenas dispara o submit do form-quick-produto
+                formQuick.requestSubmit();
+            }
+        });
+
+        formQuick.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btnSave = document.getElementById('btn-save-modal');
+            const originalText = btnSave.innerHTML;
+            btnSave.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Salvando...';
+            btnSave.disabled = true;
+
+            const payload = {
+                tipo: document.getElementById('quick-tipo').value.trim(),
+                subtipo: document.getElementById('quick-subtipo').value.trim() || null,
+                marca: document.getElementById('quick-marca').value.trim(),
+                categoria: document.getElementById('quick-categoria').value.trim(),
+                conteudo_embalagem: parseFloat(document.getElementById('quick-conteudo').value),
+                unidade_medida: document.getElementById('quick-unidade').value
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/produtos/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error('Falha ao cadastrar');
+
+                const novoProduto = await response.json();
+                
+                // Atualiza cache em memória
+                window.produtosList.push(novoProduto);
+
+                // Preenche a linha que iniciou o modal
+                if (linhaSendoEditada !== null) {
+                    const hiddenInput = document.getElementById(`prod-id-${linhaSendoEditada}`);
+                    const searchInput = document.getElementById(`prod-search-${linhaSendoEditada}`);
+                    
+                    if (hiddenInput && searchInput) {
+                        hiddenInput.value = novoProduto.id;
+                        searchInput.value = `${novoProduto.tipo} ${novoProduto.subtipo || ''} - ${novoProduto.marca} (${novoProduto.conteudo_embalagem}${novoProduto.unidade_medida})`;
+                        
+                        // Move o foco para o campo de preço
+                        const priceInput = document.querySelector(`input[name="itens[${linhaSendoEditada}].preco_pago"]`);
+                        if (priceInput) priceInput.focus();
+                    }
+                }
+                
+                fecharModalProduto();
+
+            } catch (err) {
+                console.error(err);
+                alert("Erro ao salvar produto.");
+            } finally {
+                btnSave.innerHTML = originalText;
+                btnSave.disabled = false;
+            }
+        });
+    }
+});
+
+
 
 async function handleNovaCompraSubmit(e) {
     e.preventDefault();
