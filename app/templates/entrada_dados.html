@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-white">Bancada de Lançamento</h1>
+    <p class="text-slate-400 mt-1">Registre suas compras de forma ágil e sem atrito.</p>
+</div>
+
+<!-- Datalists para Autocomplete Nativo -->
+<datalist id="list-tipos">
+    {% for tipo in tipos %}<option value="{{ tipo }}">{% endfor %}
+</datalist>
+<datalist id="list-subtipos">
+    {% for sub in subtipos %}<option value="{{ sub }}">{% endfor %}
+</datalist>
+<datalist id="list-marcas">
+    {% for marca in marcas %}<option value="{{ marca }}">{% endfor %}
+</datalist>
+<datalist id="list-categorias">
+    {% for cat in categorias %}<option value="{{ cat }}">{% endfor %}
+</datalist>
+<datalist id="list-produtos">
+    {% for p in produtos %}<option value="{{ p.tipo }}{% if p.subtipo %} {{ p.subtipo }}{% endif %} - {{ p.marca }} ({{ p.conteudo_embalagem }}{{ p.unidade_medida }})">{% endfor %}
+</datalist>
+
+<form id="form-nova-compra" class="flex flex-col xl:flex-row gap-6 items-start">
+    
+    <!-- Esquerda: Itens (Foco Principal) -->
+    <div class="flex-1 w-full glass-panel p-6 rounded-2xl">
+        <div class="flex justify-between items-center mb-6 pb-4 border-b border-dark-border">
+            <h3 class="text-xl font-semibold text-slate-200">Itens do Cupom Fiscal</h3>
+            <button type="button" id="btn-add-item" class="bg-neon-blue hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                Adicionar Produto
+            </button>
+        </div>
+        
+        <div id="items-container" class="space-y-4">
+            <!-- As linhas serão inseridas dinamicamente pelo JS -->
+        </div>
+    </div>
+    
+    <!-- Direita: Metadados da Compra (Sidebar fixa) -->
+    <div class="w-full xl:w-80 glass-panel p-6 rounded-2xl shrink-0 sticky top-6">
+        <h3 class="text-xl font-semibold text-slate-200 mb-6">Dados da Nota</h3>
+        
+        <div class="space-y-5">
+            <div>
+                <label class="block text-sm font-medium text-slate-400 mb-2">Mercado</label>
+                <select name="mercado_id" class="w-full bg-slate-900/50 border border-dark-border rounded-lg px-4 py-3 text-white focus:outline-none focus:border-neon-blue transition-colors" required>
+                    <option value="">Selecione...</option>
+                    {% for m in mercados %}
+                        <option value="{{ m.id }}">{{ m.nome }} ({{ m.tipo }}){% if m.cidade %} — {{ m.cidade }}{% endif %}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-slate-400 mb-2">Data da Compra</label>
+                <input type="date" name="data" id="data" class="w-full bg-slate-900/50 border border-dark-border rounded-lg px-4 py-3 text-white focus:outline-none focus:border-neon-blue transition-colors" required>
+                <script>document.getElementById('data').valueAsDate = new Date();</script>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-400 mb-2">NF-e <span class="text-slate-600">(opcional)</span></label>
+                <input type="text" name="nfe" placeholder="Número da Nota Fiscal" class="w-full bg-slate-900/50 border border-dark-border rounded-lg px-4 py-3 text-white focus:outline-none focus:border-neon-blue transition-colors">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-400 mb-2">Observações <span class="text-slate-600">(opcional)</span></label>
+                <textarea name="observacoes" rows="3" placeholder="Anotações sobre a compra..." class="w-full bg-slate-900/50 border border-dark-border rounded-lg px-4 py-3 text-white focus:outline-none focus:border-neon-blue transition-colors resize-none"></textarea>
+            </div>
+            
+            <hr class="border-dark-border my-6">
+            
+            <button type="submit" class="w-full bg-neon-purple hover:bg-purple-600 text-white px-4 py-4 rounded-lg font-bold text-lg shadow-lg shadow-purple-500/20 transition-all hover:-translate-y-1">
+                Lançar Cupom Inteiro
+            </button>
+        </div>
+    </div>
+
+</form>
+{% endblock %}

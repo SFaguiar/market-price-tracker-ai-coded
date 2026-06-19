@@ -1,0 +1,63 @@
+{% extends "sqladmin/layout.html" %}
+
+{% block content %}
+<div class="container-fluid" style="padding: 2rem;">
+    <h2 class="mb-4">
+        <i class="fa-solid fa-database text-primary"></i> 
+        Dicionário de Dados Vivo
+    </h2>
+    <p class="text-muted mb-4">Estrutura ao vivo do banco de dados relacional gerado dinamicamente via SQLAlchemy Inspector.</p>
+
+    <div class="row">
+        {% for table, columns in schema_info.items() %}
+        <div class="col-12 col-xl-6 mb-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-dark text-white d-flex align-items-center">
+                    <i class="fa-solid fa-table me-2"></i>
+                    <h5 class="mb-0 text-monospace">{{ table }}</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped mb-0 text-sm">
+                            <thead class="table-light text-uppercase text-muted" style="font-size: 0.8rem;">
+                                <tr>
+                                    <th>Coluna</th>
+                                    <th>Tipo</th>
+                                    <th class="text-center">Nullable</th>
+                                    <th>Chaves</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for col in columns %}
+                                <tr>
+                                    <td class="font-weight-bold font-monospace">{{ col.name }}</td>
+                                    <td class="text-primary" style="font-size: 0.85rem;">{{ col.type }}</td>
+                                    <td class="text-center">
+                                        {% if col.nullable %}
+                                            <span class="text-muted">Sim</span>
+                                        {% else %}
+                                            <strong>Não</strong>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if col.primary_key %}
+                                            <span class="badge bg-warning text-dark"><i class="fa-solid fa-key me-1"></i>PK</span>
+                                        {% endif %}
+                                        {% if col.foreign_key %}
+                                            <span class="badge bg-info text-dark" title="Aponta para {{ col.foreign_key }}">
+                                                <i class="fa-solid fa-link me-1"></i>FK: {{ col.foreign_key }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
