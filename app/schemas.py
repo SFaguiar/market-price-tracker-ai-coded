@@ -27,6 +27,7 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 class RedeBase(BaseModel):
     """Campos compartilhados para a entidade Rede."""
+    model_config = ConfigDict(str_strip_whitespace=True)
     nome: str
 
 class RedeCreate(RedeBase):
@@ -45,6 +46,7 @@ class RedeResponse(RedeBase):
 
 class MercadoBase(BaseModel):
     """Campos compartilhados para a entidade Mercado."""
+    model_config = ConfigDict(str_strip_whitespace=True)
 
     nome: str
     rede_id: Optional[int] = None
@@ -85,6 +87,7 @@ class ProdutoBase(BaseModel):
     conteudo_embalagem e unidade_medida descrevem o conteúdo da
     embalagem vendida (ex: 12 un, 1 kg, 500 ml).
     """
+    model_config = ConfigDict(str_strip_whitespace=True)
 
     tipo: str
     subtipo: Optional[str] = None
@@ -139,6 +142,7 @@ class CompraItemBase(BaseModel):
         is_validade_proxima: Produto da seção "vencinho".
         fonte_dado: Origem do dado coletado.
     """
+    model_config = ConfigDict(str_strip_whitespace=True)
 
     produto_id: int
     preco_pago: Decimal
@@ -217,6 +221,7 @@ class CompraItemResponse(CompraItemBase):
 
 class CompraBase(BaseModel):
     """Campos compartilhados para a entidade Compra."""
+    model_config = ConfigDict(str_strip_whitespace=True)
 
     mercado_id: int
     data: datetime.date

@@ -5,8 +5,19 @@
  *   - Produto usa tipo/subtipo em vez de nome
  *   - Embalagem (conteudo_embalagem, unidade_medida) mora no Produto
  *   - Compra ganha nfe e observacoes
- *   - CompraItem simplificado (sem peso_vol_total/unidade_medida)
+ *   - CompraItem
  */
+
+// Utilitário Anti-XSS
+function escapeHtml(unsafe) {
+    if (unsafe == null) return '';
+    return String(unsafe)
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
+}
 
 const API_BASE = window.location.origin;
 
@@ -44,10 +55,11 @@ function formatCurrency(value) {
  * Monta o nome de exibição de um produto a partir de tipo/subtipo/marca.
  */
 function produtoDisplayName(produto) {
-    let label = produto.tipo;
-    if (produto.subtipo) label += ` ${produto.subtipo}`;
-    label += ` — ${produto.marca}`;
-    label += ` (${produto.conteudo_embalagem}${produto.unidade_medida})`;
+    if (!produto) return 'Desconhecido';
+    let label = escapeHtml(produto.tipo);
+    if (produto.subtipo) label += ` ${escapeHtml(produto.subtipo)}`;
+    label += ` — ${escapeHtml(produto.marca)}`;
+    label += ` (${escapeHtml(produto.conteudo_embalagem)}${escapeHtml(produto.unidade_medida)})`;
     return label;
 }
 
@@ -118,26 +130,25 @@ async function initDashboard() {
             const isWinner = index === 0 && item.status === 'Completa';
             const statusClass = item.status === 'Completa' ? 'text-neon-green' : 'text-amber-400';
             
-            let missingHtml = '';
-            if (item.faltantes.length > 0) {
-                missingHtml = `<div class="mt-3 pt-3 border-t border-slate-700/50 text-xs text-slate-400">
-                    <span class="text-amber-400"><i class="fa-solid fa-circle-exclamation"></i> Faltam dados:</span> ${item.faltantes.join(', ')}
-                </div>`;
-            }
+            const missingHtml = item.faltantes && item.faltantes.length > 0 
+                ? `<div class="mt-4 text-xs bg-red-900/20 text-red-300 p-2 rounded-lg border border-red-900/50">
+                    <span class="text-amber-400"><i class="fa-solid fa-circle-exclamation"></i> Faltam dados:</span> ${escapeHtml(item.faltantes.join(', '))}
+                   </div>`
+                : '';
 
             const card = `
                 <div class="glass-panel p-6 rounded-2xl relative overflow-hidden border ${isWinner ? 'border-neon-green shadow-[0_0_15px_rgba(34,197,94,0.2)]' : 'border-slate-700/50'}">
                     ${isWinner ? '<div class="absolute -right-6 -top-6 text-5xl opacity-10">👑</div>' : ''}
                     <h3 class="text-lg font-bold text-slate-200 mb-1 flex items-center gap-2">
                         ${isWinner ? '<i class="fa-solid fa-crown text-neon-green"></i>' : '<i class="fa-solid fa-store text-slate-500"></i>'}
-                        ${item.mercado}
+                        ${escapeHtml(item.mercado)}
                     </h3>
                     <div class="flex items-end gap-2 mb-2">
                         <span class="text-3xl font-black text-white">${formatCurrency(item.preco_total)}</span>
                         <span class="text-sm pb-1 text-slate-400">/ un. padrão</span>
                     </div>
                     <div class="text-sm font-medium ${statusClass}">
-                        ${item.status}
+                        ${escapeHtml(item.status)}
                     </div>
                     ${missingHtml}
                 </div>
@@ -192,15 +203,15 @@ async function initDashboard() {
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg ${isCheapest ? 'bg-neon-green/10 border border-neon-green/30' : 'bg-slate-800/50 border border-slate-700/50'}">
                             <div>
                                 <div class="font-bold text-white flex items-center gap-2">
-                                    ${res.mercado}
+                                    ${escapeHtml(res.mercado)}
                                     ${isCheapest ? '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-neon-green text-slate-900 uppercase">Mais Barato</span>' : ''}
                                 </div>
-                                <div class="text-xs text-slate-400 mt-1">${res.produto_str}</div>
-                                <div class="text-[10px] text-slate-500 mt-0.5"><i class="fa-regular fa-clock"></i> Último registro: ${res.data}</div>
+                                <div class="text-xs text-slate-400 mt-1">${escapeHtml(res.produto_str)}</div>
+                                <div class="text-[10px] text-slate-500 mt-0.5"><i class="fa-regular fa-clock"></i> Último registro: ${escapeHtml(res.data)}</div>
                             </div>
                             <div class="mt-2 sm:mt-0 text-left sm:text-right">
                                 <div class="text-xl font-black ${isCheapest ? 'text-neon-green' : 'text-slate-200'}">${formatCurrency(res.preco_padrao)}</div>
-                                <div class="text-xs text-slate-500">por ${res.unidade}</div>
+                                <div class="text-xs text-slate-500">por ${escapeHtml(res.unidade)}</div>
                             </div>
                         </div>
                     `;
@@ -367,7 +378,7 @@ function renderDropdown(query, listEl, hiddenInput, searchInput, idx) {
     filtered.forEach(p => {
         const li = document.createElement('li');
         li.className = 'px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white cursor-pointer border-b border-slate-700/50 last:border-0';
-        li.innerHTML = `<strong>${p.tipo}</strong> ${p.subtipo ? p.subtipo : ''} - <span class="text-slate-400">${p.marca} (${p.conteudo_embalagem}${p.unidade_medida})</span>`;
+        li.innerHTML = `<strong>${escapeHtml(p.tipo)}</strong> ${p.subtipo ? escapeHtml(p.subtipo) : ''} - <span class="text-slate-400">${escapeHtml(p.marca)} (${escapeHtml(p.conteudo_embalagem)}${escapeHtml(p.unidade_medida)})</span>`;
         
         li.addEventListener('click', () => {
             hiddenInput.value = p.id;
@@ -381,7 +392,7 @@ function renderDropdown(query, listEl, hiddenInput, searchInput, idx) {
     // Adicionar botão de cadastro (Sempre no final)
     const addLi = document.createElement('li');
     addLi.className = 'px-3 py-2 text-sm text-neon-blue font-bold bg-slate-900/50 hover:bg-slate-700 cursor-pointer flex items-center gap-2 sticky bottom-0';
-    addLi.innerHTML = `<i class="fa-solid fa-plus"></i> Cadastrar "${query}"`;
+    addLi.innerHTML = `<i class="fa-solid fa-plus"></i> Cadastrar "${escapeHtml(query)}"`;
     addLi.addEventListener('click', () => {
         listEl.classList.add('hidden');
         abrirModalProduto(query, idx);
@@ -570,11 +581,11 @@ async function initHistorico() {
             if(i.is_fidelidade) tags += `<span class="bg-neon-green/20 text-neon-green text-[10px] font-bold px-2 py-1 rounded mx-1 uppercase">Fidel.</span>`;
             if(i.is_validade_proxima) tags += `<span class="bg-yellow-500/20 text-yellow-400 text-[10px] font-bold px-2 py-1 rounded mx-1 uppercase">Venc.</span>`;
             
-            const pLabel = produtoDisplayName(i.produto);
+            const pLabel = produtoDisplayName(i.produto); // Já está escapado dentro da função
             
             tr.innerHTML = `
-                <td class="px-6 py-4 whitespace-nowrap">${c.data}</td>
-                <td class="px-6 py-4">${c.mercado.nome}</td>
+                <td class="px-6 py-4 whitespace-nowrap">${escapeHtml(c.data)}</td>
+                <td class="px-6 py-4">${escapeHtml(c.mercado.nome)}</td>
                 <td class="px-6 py-4 font-medium text-white">${pLabel}</td>
                 <td class="px-6 py-4 text-right text-slate-300">R$ ${parseFloat(i.preco_pago).toFixed(2)}</td>
                 <td class="px-6 py-4 text-right">${i.quantidade}</td>

@@ -139,6 +139,8 @@ import json
 from fastapi import Request
 from sqlalchemy import select
 from app.database import SessionLocal
+from pydantic import ValidationError
+from app.schemas import ProdutoCreate, MercadoCreate
 
 class BulkImportView(BaseView):
     name = "Importação em Massa"
@@ -208,22 +210,32 @@ class BulkImportView(BaseView):
                     if not tipo or not marca or not categoria or conteudo is None or not unidade:
                         continue # Pula itens com dados faltando
                     
+                    try:
+                        p_create = ProdutoCreate(
+                            tipo=tipo,
+                            subtipo=subtipo,
+                            marca=marca,
+                            categoria=categoria,
+                            conteudo_embalagem=conteudo,
+                            unidade_medida=unidade
+                        )
+                    except ValidationError:
+                        ignorados += 1
+                        continue
+                    
                     chave = (
-                        tipo.lower(),
-                        subtipo.lower() if subtipo else "",
-                        marca.lower(),
-                        float(conteudo),
-                        unidade
+                        p_create.tipo.lower(),
+                        p_create.subtipo.lower() if p_create.subtipo else "",
+                        p_create.marca.lower(),
+                        float(p_create.conteudo_embalagem),
+                        p_create.unidade_medida.lower()
                     )
 
                     if chave in set_existentes:
                         ignorados += 1
                         continue
 
-                    db.add(Produto(
-                        tipo=tipo, subtipo=subtipo, marca=marca,
-                        categoria=categoria, conteudo_embalagem=conteudo, unidade_medida=unidade
-                    ))
+                    db.add(Produto(**p_create.model_dump()))
                     set_existentes.add(chave)
                     inseridos += 1
             
@@ -238,20 +250,26 @@ class BulkImportView(BaseView):
                     
                     if not nome or not tipo:
                         continue # Pula itens inválidos
-                    
-                    if nome.lower() in set_existentes:
+                        
+                    try:
+                        m_create = MercadoCreate(
+                            nome=nome,
+                            tipo=tipo,
+                            endereco=item.get("endereco"),
+                            cidade=item.get("cidade"),
+                            estado=item.get("estado"),
+                            latitude=item.get("latitude"),
+                            longitude=item.get("longitude")
+                        )
+                    except ValidationError:
                         ignorados += 1
                         continue
                     
-                    db.add(Mercado(
-                        nome=nome,
-                        tipo=tipo,
-                        endereco=item.get("endereco"),
-                        cidade=item.get("cidade"),
-                        estado=item.get("estado"),
-                        latitude=item.get("latitude"),
-                        longitude=item.get("longitude")
-                    ))
+                    if m_create.nome.lower() in set_existentes:
+                        ignorados += 1
+                        continue
+                    
+                    db.add(Mercado(**m_create.model_dump()))
                     set_existentes.add(nome.lower())
                     inseridos += 1
             elif entidade == "compras":
