@@ -48,9 +48,7 @@ class MercadoBase(BaseModel):
 
     nome: str
     rede_id: Optional[int] = None
-    tipo: Literal[
-        "Atacado", "Supermercado", "Mercado de Bairro", "Feira", "Outros"
-    ]
+    tipo: str
     endereco: Optional[str] = None
     cidade: Optional[str] = None
     estado: Optional[str] = None
