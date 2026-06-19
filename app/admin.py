@@ -476,3 +476,14 @@ class NFEParserView(BaseView):
         except Exception as e:
             from fastapi.responses import JSONResponse
             return JSONResponse(content={"error": f"Erro ao processar HTML: {str(e)}"}, status_code=400)
+
+class DeduplicationView(BaseView):
+    name = "Saneamento (Deduplicação)"
+    icon = "fa-solid fa-broom"
+
+    @expose("/saneamento", methods=["GET"])
+    async def deduplication_page(self, request: Request):
+        return await self.templates.TemplateResponse(
+            request,
+            "dedup_admin.html"
+        )

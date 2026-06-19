@@ -1,0 +1,248 @@
+{% extends "sqladmin/layout.html" %}
+
+{% block content %}
+<div class="container-fluid" style="padding: 20px;">
+    <h2><i class="fa-solid fa-broom"></i> Saneamento de Dados (Deduplicação)</h2>
+    <p class="text-muted">Varra o banco de dados em busca de produtos clonados por erros de digitação ou inteligência artificial.</p>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Varredura de Similaridade</h5>
+            <p class="card-text">O algoritmo analisará todos os produtos e agrupará aqueles com alta similaridade textual (mesma categoria e embalagem).</p>
+            <button id="btn-scan" class="btn btn-primary">
+                <i class="fa-solid fa-radar"></i> Iniciar Varredura Profunda
+            </button>
+            <span id="scan-status" class="ms-3 text-secondary" style="display: none;">
+                <i class="fa-solid fa-spinner fa-spin"></i> Processando todo o banco de dados...
+            </span>
+        </div>
+    </div>
+
+    <div id="results-container" style="display: none;">
+        <h4 class="mb-3">Grupos Suspeitos (<span id="cluster-count">0</span>)</h4>
+        <div id="clusters-list">
+            <!-- Cards de cluster serão injetados aqui -->
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Sucesso -->
+<div class="modal fade" id="successModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-success">Sucesso!</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="success-msg">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const btnScan = document.getElementById('btn-scan');
+    const scanStatus = document.getElementById('scan-status');
+    const resultsContainer = document.getElementById('results-container');
+    const clustersList = document.getElementById('clusters-list');
+    const clusterCount = document.getElementById('cluster-count');
+
+    btnScan.addEventListener('click', async () => {
+        btnScan.disabled = true;
+        scanStatus.style.display = 'inline-block';
+        resultsContainer.style.display = 'none';
+        clustersList.innerHTML = '';
+
+        try {
+            const res = await fetch('/saneamento/duplicados');
+            if (!res.ok) throw new Error("Falha ao varrer o banco de dados.");
+            const data = await res.json();
+            
+            const clusters = data.clusters;
+            clusterCount.innerText = clusters.length;
+            
+            if (clusters.length === 0) {
+                clustersList.innerHTML = '<div class="alert alert-success">Nenhum produto duplicado encontrado! Seu banco está limpo.</div>';
+            } else {
+                clusters.forEach(cluster => {
+                    renderCluster(cluster);
+                });
+            }
+            resultsContainer.style.display = 'block';
+
+        } catch (e) {
+            alert(e.message);
+        } finally {
+            btnScan.disabled = false;
+            scanStatus.style.display = 'none';
+        }
+    });
+
+    function renderCluster(cluster) {
+        // Criação do Card
+        const card = document.createElement('div');
+        card.className = 'card mb-4 border-warning';
+        card.id = cluster.id_cluster;
+        
+        let headerHtml = `<div class="card-header bg-warning text-dark fw-bold">
+            <i class="fa-solid fa-triangle-exclamation"></i> Conflito de Similaridade (${cluster.unidade_medida})
+        </div>`;
+        
+        let bodyHtml = `<div class="card-body">
+            <p class="text-muted small mb-3">Escolha 1 produto mestre (para manter) e os outros serão apagados e mesclados nele.</p>
+            <table class="table table-sm table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th style="width: 50px;">Mestre</th>
+                        <th style="width: 50px;">Mesclar</th>
+                        <th>Tipo</th>
+                        <th>Subtipo</th>
+                        <th>Marca</th>
+                        <th>Embalagem</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        cluster.produtos.forEach((p, idx) => {
+            const isMaster = idx === 0 ? "checked" : "";
+            const isVictim = idx !== 0 ? "checked" : "";
+            
+            bodyHtml += `
+                <tr>
+                    <td class="text-center">
+                        <input class="form-check-input master-radio" type="radio" name="master_${cluster.id_cluster}" value="${p.id}" ${isMaster}>
+                    </td>
+                    <td class="text-center">
+                        <input class="form-check-input victim-check" type="checkbox" data-cluster="${cluster.id_cluster}" value="${p.id}" ${isVictim}>
+                    </td>
+                    <td class="master-tipo" data-id="${p.id}">${p.tipo}</td>
+                    <td class="master-subtipo" data-id="${p.id}">${p.subtipo || ''}</td>
+                    <td class="master-marca" data-id="${p.id}">${p.marca}</td>
+                    <td>${p.embalagem}</td>
+                </tr>
+            `;
+        });
+        
+        bodyHtml += `
+                </tbody>
+            </table>
+            
+            <div class="mt-4 p-3 bg-light border rounded">
+                <h6 class="text-primary mb-3"><i class="fa-solid fa-pen-to-square"></i> Edição do Mestre (Opcional)</h6>
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <label class="form-label small text-muted">Tipo</label>
+                        <input type="text" class="form-control form-control-sm edit-tipo" id="edit-tipo-${cluster.id_cluster}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small text-muted">Subtipo</label>
+                        <input type="text" class="form-control form-control-sm edit-subtipo" id="edit-subtipo-${cluster.id_cluster}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small text-muted">Marca</label>
+                        <input type="text" class="form-control form-control-sm edit-marca" id="edit-marca-${cluster.id_cluster}">
+                    </div>
+                </div>
+                <small class="text-muted mt-2 d-block">Ao confirmar, o Produto Mestre selecionado na tabela será reescrito com esses valores.</small>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2 mt-3">
+                <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('${cluster.id_cluster}').remove();">Ignorar Grupo</button>
+                <button class="btn btn-success btn-sm btn-merge" data-cluster="${cluster.id_cluster}">
+                    <i class="fa-solid fa-code-merge"></i> Confirmar Mesclagem
+                </button>
+            </div>
+        </div>`;
+        
+        card.innerHTML = headerHtml + bodyHtml;
+        clustersList.appendChild(card);
+
+        // Lógica de desmarcar o checkbox se a pessoa clicar no radio de Mestre
+        const radios = card.querySelectorAll('.master-radio');
+        const checkboxes = card.querySelectorAll('.victim-check');
+        
+        
+        // Pega os inputs de edição
+        const inputTipo = card.querySelector(`#edit-tipo-${cluster.id_cluster}`);
+        const inputSubtipo = card.querySelector(`#edit-subtipo-${cluster.id_cluster}`);
+        const inputMarca = card.querySelector(`#edit-marca-${cluster.id_cluster}`);
+
+        radios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const masterId = e.target.value;
+                
+                // Popula as caixas de edição com o novo mestre
+                inputTipo.value = card.querySelector(`.master-tipo[data-id="${masterId}"]`).innerText;
+                inputSubtipo.value = card.querySelector(`.master-subtipo[data-id="${masterId}"]`).innerText;
+                inputMarca.value = card.querySelector(`.master-marca[data-id="${masterId}"]`).innerText;
+
+                checkboxes.forEach(chk => {
+                    if (chk.value === masterId) {
+                        chk.checked = false; // Mestre não pode ser vítima
+                        chk.disabled = true;
+                    } else {
+                        chk.checked = true;
+                        chk.disabled = false;
+                    }
+                });
+            });
+        });
+        
+        // Disparar o change na primeira vez para configurar o estado
+        radios[0].dispatchEvent(new Event('change'));
+
+        // Botão de Mesclar
+        const btnMerge = card.querySelector('.btn-merge');
+        btnMerge.addEventListener('click', async () => {
+            const masterId = card.querySelector('.master-radio:checked').value;
+            const victims = Array.from(card.querySelectorAll('.victim-check:checked')).map(c => parseInt(c.value));
+            
+            if (victims.length === 0) {
+                alert("Selecione pelo menos um produto para mesclar.");
+                return;
+            }
+
+            btnMerge.disabled = true;
+            btnMerge.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mesclando...';
+
+            try {
+                const payload = {
+                    mestre_id: parseInt(masterId),
+                    duplicados_ids: victims,
+                    novo_tipo: inputTipo.value,
+                    novo_subtipo: inputSubtipo.value,
+                    nova_marca: inputMarca.value
+                };
+
+                const res = await fetch('/saneamento/mesclar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const responseData = await res.json();
+                
+                if (!res.ok) throw new Error(responseData.detail || "Erro desconhecido");
+                
+                document.getElementById('success-msg').innerText = responseData.message;
+                alert(responseData.message);
+                
+                // Remove o card da tela
+                card.remove();
+                clusterCount.innerText = parseInt(clusterCount.innerText) - 1;
+
+            } catch (e) {
+                alert("Erro ao mesclar: " + e.message);
+                btnMerge.disabled = false;
+                btnMerge.innerHTML = '<i class="fa-solid fa-code-merge"></i> Confirmar Mesclagem';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

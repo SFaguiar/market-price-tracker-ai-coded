@@ -14,10 +14,10 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from app.database import Base, engine
-from app.routes import compras, mercados, produtos, web, redes
+from app.routes import compras, mercados, produtos, web, redes, saneamento
 
 from sqladmin import Admin
-from app.admin import AdminAuth, RedeAdmin, MercadoAdmin, ProdutoAdmin, CompraAdmin, CompraItemAdmin, SchemaView, BulkImportView, NFEParserView
+from app.admin import AdminAuth, RedeAdmin, MercadoAdmin, ProdutoAdmin, CompraAdmin, CompraItemAdmin, SchemaView, BulkImportView, NFEParserView, DeduplicationView
 
 
 @asynccontextmanager
@@ -64,6 +64,7 @@ admin.add_view(CompraItemAdmin)
 admin.add_view(SchemaView)
 admin.add_view(BulkImportView)
 admin.add_view(NFEParserView)
+admin.add_view(DeduplicationView)
 
 # ---------------------------------------------------------------------------
 # Health Check
@@ -87,3 +88,4 @@ app.include_router(redes.router)
 app.include_router(mercados.router)
 app.include_router(produtos.router)
 app.include_router(compras.router)
+app.include_router(saneamento.router)
