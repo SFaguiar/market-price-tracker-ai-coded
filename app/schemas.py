@@ -89,9 +89,13 @@ class ProdutoBase(BaseModel):
     tipo: str
     subtipo: Optional[str] = None
     marca: str
-    categoria: str
+    categoria: Literal[
+        "Açougue", "Bazar", "Bebidas", "Congelados", "Frios e Laticínios", 
+        "Higiene Pessoal", "Hortifrúti", "Limpeza", "Mercearia", "Padaria", 
+        "Pet Shop", "Utilidades Domésticas"
+    ]
     conteudo_embalagem: Decimal
-    unidade_medida: str
+    unidade_medida: Literal["kg", "g", "l", "ml", "un", "m", "cm"]
 
 
 class ProdutoCreate(ProdutoBase):

@@ -114,9 +114,22 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-400 mb-1">Categoria</label>
-                    <input type="text" id="quick-categoria" name="categoria" required list="list-categorias" autocomplete="off"
-                           class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-neon-blue"
-                           placeholder="Ex: Mercearia">
+                    <select id="quick-categoria" name="categoria" required
+                           class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-neon-blue">
+                        <option value="">Selecione...</option>
+                        <option value="Açougue">Açougue</option>
+                        <option value="Bazar">Bazar</option>
+                        <option value="Bebidas">Bebidas</option>
+                        <option value="Congelados">Congelados</option>
+                        <option value="Frios e Laticínios">Frios e Laticínios</option>
+                        <option value="Higiene Pessoal">Higiene Pessoal</option>
+                        <option value="Hortifrúti">Hortifrúti</option>
+                        <option value="Limpeza">Limpeza</option>
+                        <option value="Mercearia">Mercearia</option>
+                        <option value="Padaria">Padaria</option>
+                        <option value="Pet Shop">Pet Shop</option>
+                        <option value="Utilidades Domésticas">Utilidades Domésticas</option>
+                    </select>
                 </div>
             </div>
             
@@ -135,6 +148,8 @@
                         <option value="g">Grama (g)</option>
                         <option value="l">Litro (l)</option>
                         <option value="ml">Mililitro (ml)</option>
+                        <option value="m">Metro (m)</option>
+                        <option value="cm">Centímetro (cm)</option>
                         <option value="un">Unidade (un)</option>
                     </select>
                 </div>
