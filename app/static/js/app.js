@@ -223,7 +223,7 @@ function addNewItemRow() {
         </div>
         
         <!-- Flags Fast Click -->
-        <div class="md:col-span-12 flex gap-4 mt-2 pt-3 border-t border-slate-800">
+        <div class="md:col-span-12 flex flex-wrap gap-x-4 gap-y-2 mt-2 pt-3 border-t border-slate-800">
             <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-300 hover:text-neon-blue">
                 <input type="checkbox" name="itens[${itemCounter}].is_promocao" class="accent-neon-blue w-4 h-4 rounded"> Promoção
             </label>

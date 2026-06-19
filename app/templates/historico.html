@@ -6,12 +6,12 @@
         <h1 class="text-3xl font-bold text-white">Consultor de Histórico</h1>
         <p class="text-slate-400 mt-1">Auditoria, filtros detalhados e exportação de dados brutos.</p>
     </div>
-    <div class="mt-4 md:mt-0 flex gap-3">
-        <button id="btn-filtros" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg font-medium border border-dark-border transition-colors flex items-center gap-2">
+    <div class="mt-4 md:mt-0 flex flex-wrap gap-3">
+        <button id="btn-filtros" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg font-medium border border-dark-border transition-colors flex items-center justify-center gap-2 flex-1 sm:flex-none">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
             Filtros
         </button>
-        <a href="/api/export/csv" class="bg-neon-green/10 text-neon-green hover:bg-neon-green hover:text-white px-4 py-2 rounded-lg font-medium border border-neon-green/30 transition-colors flex items-center gap-2">
+        <a href="/api/export/csv" class="bg-neon-green/10 text-neon-green hover:bg-neon-green hover:text-white px-4 py-2 rounded-lg font-medium border border-neon-green/30 transition-colors flex items-center justify-center gap-2 flex-1 sm:flex-none">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
             Exportar CSV
         </a>

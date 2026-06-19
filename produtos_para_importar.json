@@ -1,0 +1,58 @@
+[
+  {
+    "tipo": "Queijo",
+    "subtipo": "Mussarela Zero Lactose",
+    "marca": "Itambé",
+    "categoria": "Laticínios",
+    "conteudo_da_embalagem": 150,
+    "unidade": "g"
+  },
+  {
+    "tipo": "Creme Dental",
+    "subtipo": "Tripla Ação Hortelã",
+    "marca": "Colgate",
+    "categoria": "Higiene Pessoal",
+    "conteudo_da_embalagem": 90,
+    "unidade": "g"
+  },
+  {
+    "tipo": "Creme Dental",
+    "subtipo": "Tripla Ação Hortelã",
+    "marca": "Colgate",
+    "categoria": "Higiene Pessoal",
+    "conteudo_da_embalagem": 90,
+    "unidade": "g"
+  },
+  {
+    "tipo": "Milho",
+    "subtipo": "Verde",
+    "marca": "Genérica",
+    "categoria": "Hortifrúti",
+    "conteudo_da_embalagem": 5,
+    "unidade": "und"
+  },
+  {
+    "tipo": "Melancia",
+    "subtipo": "Fracionada",
+    "marca": "Genérica",
+    "categoria": "Hortifrúti",
+    "conteudo_da_embalagem": 1,
+    "unidade": "kg"
+  },
+  {
+    "tipo": "Melancia",
+    "subtipo": "Fracionada",
+    "marca": "Genérica",
+    "categoria": "Hortifrúti",
+    "conteudo_da_embalagem": 1,
+    "unidade": "kg"
+  },
+  {
+    "tipo": "Banana",
+    "subtipo": "Nanica",
+    "marca": "Genérica",
+    "categoria": "Hortifrúti",
+    "conteudo_da_embalagem": 1,
+    "unidade": "kg"
+  }
+]

@@ -22,6 +22,23 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
 
+class Rede(Base):
+    """Representa um conglomerado ou rede de supermercados (ex: Carrefour, Assaí)."""
+
+    __tablename__ = "redes"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    nome: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
+
+    mercados: Mapped[List["Mercado"]] = relationship(
+        back_populates="rede",
+        cascade="all, delete-orphan",
+    )
+
+    def __repr__(self) -> str:
+        return f"<Rede(id={self.id}, nome='{self.nome}')>"
+
+
 class Mercado(Base):
     """Representa um estabelecimento comercial.
 
@@ -41,14 +58,16 @@ class Mercado(Base):
     __tablename__ = "mercados"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    rede_id: Mapped[Optional[int]] = mapped_column(ForeignKey("redes.id"), nullable=True)
     nome: Mapped[str] = mapped_column(String(100), nullable=False)
     tipo: Mapped[str] = mapped_column(String(50), nullable=False)
     endereco: Mapped[Optional[str]] = mapped_column(String(300), nullable=True)
     cidade: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     estado: Mapped[Optional[str]] = mapped_column(String(2), nullable=True)
-    latitude: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    longitude: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    latitude: Mapped[Optional[Decimal]] = mapped_column(Numeric(9, 6), nullable=True)
+    longitude: Mapped[Optional[Decimal]] = mapped_column(Numeric(9, 6), nullable=True)
 
+    rede: Mapped[Optional["Rede"]] = relationship(back_populates="mercados")
     compras: Mapped[List["Compra"]] = relationship(
         back_populates="mercado",
         cascade="all, delete-orphan",

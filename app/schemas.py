@@ -18,7 +18,25 @@ import datetime
 from decimal import Decimal
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, computed_field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
+
+
+# ---------------------------------------------------------------------------
+# Rede
+# ---------------------------------------------------------------------------
+
+class RedeBase(BaseModel):
+    """Campos compartilhados para a entidade Rede."""
+    nome: str
+
+class RedeCreate(RedeBase):
+    """Schema de criação de Rede (POST). Não inclui ``id``."""
+    pass
+
+class RedeResponse(RedeBase):
+    """Schema de resposta de Rede (GET). Inclui ``id``."""
+    model_config = ConfigDict(from_attributes=True)
+    id: int
 
 
 # ---------------------------------------------------------------------------
@@ -29,14 +47,15 @@ class MercadoBase(BaseModel):
     """Campos compartilhados para a entidade Mercado."""
 
     nome: str
+    rede_id: Optional[int] = None
     tipo: Literal[
         "Atacado", "Supermercado", "Mercado de Bairro", "Feira", "Outros"
     ]
     endereco: Optional[str] = None
     cidade: Optional[str] = None
     estado: Optional[str] = None
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
+    latitude: Optional[Decimal] = Field(default=None, max_digits=9, decimal_places=6)
+    longitude: Optional[Decimal] = Field(default=None, max_digits=9, decimal_places=6)
 
 
 class MercadoCreate(MercadoBase):
@@ -51,6 +70,7 @@ class MercadoResponse(MercadoBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    rede: Optional[RedeResponse] = None
 
 
 # ---------------------------------------------------------------------------

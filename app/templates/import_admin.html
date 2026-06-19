@@ -1,0 +1,113 @@
+{% extends "sqladmin/layout.html" %}
+
+{% block content %}
+<div class="container-fluid" style="padding: 2rem;">
+    <h2 class="mb-4">
+        <i class="fa-solid fa-cloud-arrow-up text-primary"></i> 
+        Importação de Dados em Massa
+    </h2>
+    <p class="text-muted mb-4">
+        Cole um array JSON abaixo para alimentar o banco de dados. O mecanismo possui <strong>desduplicação automática</strong> para ignorar itens já existentes e poupar processamento.
+    </p>
+
+    {% if message %}
+        <div class="alert alert-{% if message.type == 'success' %}success{% else %}danger{% endif %} alert-dismissible fade show shadow-sm" role="alert">
+            {% if message.type == 'success' %}
+                <i class="fa-solid fa-circle-check me-2"></i>
+            {% else %}
+                <i class="fa-solid fa-triangle-exclamation me-2"></i>
+            {% endif %}
+            {{ message.text }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endif %}
+
+    <div class="row">
+        <div class="col-12 col-xl-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-dark text-white d-flex align-items-center">
+                    <i class="fa-solid fa-code me-2"></i>
+                    <h5 class="mb-0">Carga de Dados</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="/admin/import">
+                        <div class="mb-4">
+                            <label for="entidade" class="form-label font-weight-bold">Selecione o tipo de entidade:</label>
+                            <select class="form-select form-select-lg" id="entidade" name="entidade" required>
+                                <option value="" disabled selected>Escolha uma opção...</option>
+                                <option value="produtos">Produtos</option>
+                                <option value="mercados">Estabelecimentos (Mercados)</option>
+                                <option value="compras">Compras (NFC-e Estruturada)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="json_data" class="form-label font-weight-bold">Cole o JSON bruto aqui:</label>
+                            <textarea class="form-control font-monospace text-sm bg-light" id="json_data" name="json_data" rows="15" placeholder='[
+  {
+    "tipo": "Queijo",
+    "marca": "Itambé",
+    "categoria": "Laticínios",
+    "conteudo_embalagem": 150,
+    "unidade_medida": "g"
+  }
+]' required></textarea>
+                            <div class="form-text mt-2">
+                                <i class="fa-solid fa-circle-info me-1"></i> O objeto raiz deve ser uma lista <code>[ ... ]</code>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="submit" class="btn btn-primary btn-lg px-4 shadow-sm">
+                                <i class="fa-solid fa-bolt me-2"></i> Processar Importação
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-12 col-xl-4 mt-4 mt-xl-0">
+            <div class="card bg-light border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title text-muted mb-3"><i class="fa-solid fa-book me-2"></i>Guia de Formatação</h5>
+                    
+                    <h6 class="font-weight-bold mt-4 text-primary">Para Produtos:</h6>
+                    <ul class="text-sm text-muted">
+                        <li><code>tipo</code> (string) - ex: Arroz</li>
+                        <li><code>subtipo</code> (string, opcional)</li>
+                        <li><code>marca</code> (string)</li>
+                        <li><code>categoria</code> (string)</li>
+                        <li><code>conteudo_embalagem</code> (número)</li>
+                        <li><code>unidade_medida</code> (kg, g, l, ml, un)</li>
+                    </ul>
+                    <p class="text-xs text-muted"><em>Dica: O sistema aceita chaves antigas ("conteudo_da_embalagem", "und") e normaliza automaticamente.</em></p>
+
+                    <hr>
+
+                    <h6 class="font-weight-bold mt-4 text-primary">Para Mercados:</h6>
+                    <ul class="text-sm text-muted">
+                        <li><code>nome</code> (string)</li>
+                        <li><code>tipo</code> (string) - Atacado, Supermercado, etc.</li>
+                        <li><code>endereco</code> (string, opcional)</li>
+                        <li><code>cidade</code> (string, opcional)</li>
+                        <li><code>estado</code> (string, opcional) - UF</li>
+                        <li><code>latitude</code> (número, opcional)</li>
+                        <li><code>longitude</code> (número, opcional)</li>
+                    </ul>
+
+                    <hr>
+
+                    <h6 class="font-weight-bold mt-4 text-primary">Para Compras (NFC-e):</h6>
+                    <ul class="text-sm text-muted">
+                        <li>Pode enviar uma lista <code>[ ... ]</code> ou um único objeto <code>{ ... }</code></li>
+                        <li>A chave <code>mercado</code> com dados do estabelecimento</li>
+                        <li><code>nfe</code> e <code>data_emissao</code></li>
+                        <li>Lista de <code>itens</code>, cada um contendo a chave <code>produto</code>, <code>quantidade</code> e <code>valor_unitario</code>.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

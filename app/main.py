@@ -14,10 +14,10 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from app.database import Base, engine
-from app.routes import compras, mercados, produtos, web
+from app.routes import compras, mercados, produtos, web, redes
 
 from sqladmin import Admin
-from app.admin import AdminAuth, MercadoAdmin, ProdutoAdmin, CompraAdmin, CompraItemAdmin, SchemaView
+from app.admin import AdminAuth, RedeAdmin, MercadoAdmin, ProdutoAdmin, CompraAdmin, CompraItemAdmin, SchemaView, BulkImportView, NFEParserView
 
 
 @asynccontextmanager
@@ -56,11 +56,14 @@ secret_key = os.getenv("SECRET_KEY", "fallback_secret_key_if_missing")
 authentication_backend = AdminAuth(secret_key=secret_key)
 
 admin = Admin(app, engine, authentication_backend=authentication_backend, templates_dir="app/templates")
+admin.add_view(RedeAdmin)
 admin.add_view(MercadoAdmin)
 admin.add_view(ProdutoAdmin)
 admin.add_view(CompraAdmin)
 admin.add_view(CompraItemAdmin)
 admin.add_view(SchemaView)
+admin.add_view(BulkImportView)
+admin.add_view(NFEParserView)
 
 # ---------------------------------------------------------------------------
 # Health Check
@@ -80,6 +83,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 # ---------------------------------------------------------------------------
 
 app.include_router(web.router)
+app.include_router(redes.router)
 app.include_router(mercados.router)
 app.include_router(produtos.router)
 app.include_router(compras.router)

@@ -1,0 +1,145 @@
+{% extends "sqladmin/layout.html" %}
+
+{% block content %}
+<div class="container-fluid" style="padding: 2rem;">
+    <h2 class="mb-4">
+        <i class="fa-solid fa-file-invoice text-primary"></i> 
+        Extrator de NFC-e (HTML para JSON)
+    </h2>
+    <p class="text-muted mb-4">
+        Cole o código-fonte HTML de uma nota fiscal eletrônica (SEFAZ) para extrair os produtos e valores limpos em formato JSON.
+    </p>
+
+    <div id="alert_container"></div>
+
+    <div class="row">
+        <!-- Coluna de Entrada -->
+        <div class="col-12 col-xl-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-dark text-white d-flex align-items-center">
+                    <i class="fa-brands fa-html5 me-2"></i>
+                    <h5 class="mb-0">Entrada: Código HTML</h5>
+                </div>
+                <div class="card-body">
+                    <form id="extract_form" onsubmit="submitHtml(event)">
+                        <div class="mb-3">
+                            <label for="html_data" class="form-label font-weight-bold">Cole o HTML aqui:</label>
+                            <textarea class="form-control font-monospace text-sm bg-light" id="html_data" name="html_data" rows="20" placeholder="<!DOCTYPE html>..." required></textarea>
+                        </div>
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="submit" class="btn btn-primary btn-lg px-4 shadow-sm" id="btn_submit">
+                                <i class="fa-solid fa-filter me-2"></i> <span id="btn_text">Extrair Dados</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Coluna de Saída -->
+        <div class="col-12 col-xl-6 mt-4 mt-xl-0">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-success text-white d-flex align-items-center">
+                    <i class="fa-brands fa-node-js me-2"></i>
+                    <h5 class="mb-0">Saída: JSON Limpo</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="json_out" class="form-label font-weight-bold">Resultado Extraído:</label>
+                        <textarea class="form-control font-monospace text-sm bg-light" id="json_out" rows="20" readonly style="cursor: text;">Aguardando extração...</textarea>
+                    </div>
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="button" class="btn btn-outline-secondary px-4 shadow-sm" onclick="copyJson()">
+                            <i class="fa-solid fa-copy me-2"></i> Copiar JSON
+                        </button>
+                        <button type="button" class="btn btn-success px-4 shadow-sm" onclick="downloadJson()">
+                            <i class="fa-solid fa-download me-2"></i> Baixar JSON
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function submitHtml(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const btnSubmit = document.getElementById("btn_submit");
+    const btnText = document.getElementById("btn_text");
+    const jsonOut = document.getElementById("json_out");
+    const alertContainer = document.getElementById("alert_container");
+    
+    // UI State
+    btnSubmit.disabled = true;
+    btnText.innerText = "Processando...";
+    alertContainer.innerHTML = "";
+    
+    try {
+        const response = await fetch('/admin/nfe-parser', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || "Erro desconhecido na extração.");
+        }
+        
+        jsonOut.value = JSON.stringify(data, null, 2);
+    } catch (err) {
+        alertContainer.innerHTML = `
+            <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+                <i class="fa-solid fa-triangle-exclamation me-2"></i>
+                ${err.message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        `;
+    } finally {
+        btnSubmit.disabled = false;
+        btnText.innerText = "Extrair Dados";
+    }
+}
+
+function copyJson() {
+    var copyText = document.getElementById("json_out");
+    if(copyText.value === "Aguardando extração...") return;
+    
+    copyText.select();
+    copyText.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(copyText.value).then(function() {
+        alert("JSON copiado para a área de transferência!");
+    });
+}
+
+function downloadJson() {
+    const copyText = document.getElementById("json_out").value;
+    if(copyText === "Aguardando extração...") return;
+    
+    try {
+        // Try parsing to get the key or date for filename
+        const data = JSON.parse(copyText);
+        let filename = "nfe_extracao.json";
+        if (data.chave_nfe) {
+            filename = `nfe_${data.chave_nfe}.json`;
+        }
+        
+        const blob = new Blob([copyText], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch(e) {
+        alert("JSON inválido.");
+    }
+}
+</script>
+{% endblock %}
